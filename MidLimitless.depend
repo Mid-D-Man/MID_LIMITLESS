@@ -1,0 +1,66 @@
+# depslib dependency file v1.0
+1719431449 source:/Users/midman/Desktop/MDL/MidLimitless/Token.cpp
+	<stdio.h>
+	"Token.hpp"
+
+1719348996 /Users/midman/Desktop/MDL/MidLimitless/Token.hpp
+	<string>
+	"SubToken.hpp"
+
+1719522853 /Users/midman/Desktop/MDL/MidLimitless/SubToken.hpp
+
+1719434595 source:/Users/midman/Desktop/MDL/MidLimitless/Lexer.cpp
+	<iostream>
+	<stack>
+	<memory>
+	<cctype>
+	<sstream>
+	<variant>
+	<regex>
+	"Lexer.hpp"
+
+1719354548 source:/Users/midman/Desktop/MDL/MidLimitless/Parser.cpp
+
+1719430113 source:/Users/midman/Desktop/MDL/MidLimitless/SubToken.cpp
+	"SubToken.hpp"
+
+1719435394 source:/Users/midman/Desktop/MDL/MidLimitless/Tester.cpp
+	"Lexer.hpp"
+	<iostream>
+
+1719430042 source:/Users/midman/Desktop/MDL/MidLimitless/Identifier.cpp
+	<stack>
+	<string>
+	<unordered_map>
+	"Identifier.hpp"
+
+1719433982 /Users/midman/Desktop/MDL/MidLimitless/Identifier.hpp
+	<string>
+	<unordered_map>
+	<stack>
+
+1719431370 source:/Users/midman/Desktop/MDL/MidLimitless/TrieNode.cpp
+	<string>
+	<vector>
+	"TrieNode.hpp"
+	<unordered_map>
+
+1719431390 /Users/midman/Desktop/MDL/MidLimitless/TrieNode.hpp
+	<string>
+	<vector>
+	<unordered_map>
+	"Token.hpp"
+
+1719434246 source:/Users/midman/Desktop/MDL/MidLimitless/Main.cpp
+	"Lexer.hpp"
+	<iostream>
+
+1719434639 /Users/midman/Desktop/MDL/MidLimitless/Lexer.hpp
+	<string>
+	<vector>
+	"TrieNode.hpp"
+	"StateMachine.hpp"
+	"Identifier.hpp"
+
+1719434473 /Users/midman/Desktop/MDL/MidLimitless/StateMachine.hpp
+
