@@ -40,6 +40,9 @@ Token(): tokenValue("Null_Undefined"),tokenType(TokenType::Null_Undefined),subTo
     bool isValid()const{
         return !tokenValue.empty() && tokenType != TokenType::Null_Undefined;
     }
-};
+    };
+
 
 const char* TokenTypeToString(TokenType tokenType);
+
+ 

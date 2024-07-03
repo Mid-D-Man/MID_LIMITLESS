@@ -1,32 +1,30 @@
+
 #include<string>
 #include<vector>
 #include "TrieNode.hpp"
 #include<unordered_map>
+
 #pragma region MidTierCollector
-using namespace std;
+
 // Assume Token, TokentokenType, and SubTokenInfo are defined as provided earlier
 
-  TrieNode::TrieNode(){
+TrieNode::TrieNode() {
 
-    unordered_map<char, shared_ptr<TrieNode> > children;
-    bool isEndOfToken = false;
-    Token token; // Store the token at the end node
+     isEndOfToken = false;
 
 };
 
- TokenTrie::TokenTrie (){
 
- shared_ptr<TrieNode> root(make_shared<TrieNode>());
-  vector<Token> tokens; // Store tokens in order of insertion
-
+ TokenTrie::TokenTrie(){
+root = std::make_shared<TrieNode>();
 
 };
 
-    void TokenTrie::insert(const Token& token) {
+void TokenTrie::insert(const Token& token) {
         auto current = root;
         for (char ch : token.tokenValue) {
             if (current->children.find(ch) == current->children.end()) {
-                current->children[ch] = make_shared<TrieNode>();
+                current->children[ch] = std::make_shared<TrieNode>();
             }
             current = current->children[ch];
         }
@@ -35,7 +33,7 @@ using namespace std;
         tokens.push_back(token);
     }
 
-    Token  TokenTrie::getLastToken() const {
+    Token TokenTrie::getLastToken() const {
         if (!tokens.empty()) {
             return tokens.back();
         }
@@ -43,7 +41,7 @@ using namespace std;
         return Token("", TokenType::Identifier, SubTokenInfo());
     }
 
-    Token  TokenTrie::getFirstToken() const {
+    Token TokenTrie::getFirstToken() const {
         if (!tokens.empty()) {
             return tokens.front();
         }
@@ -51,7 +49,7 @@ using namespace std;
         return Token("", TokenType::Identifier, SubTokenInfo());
     }
 
-    bool  TokenTrie::deleteToken(const string &tokentokenValue) {
+    bool TokenTrie::deleteToken(const std::string &tokentokenValue) {
         for (auto it = tokens.begin(); it != tokens.end(); ++it) {
             if (it->tokenValue == tokentokenValue) {
                 tokens.erase(it);
@@ -69,12 +67,11 @@ using namespace std;
         tokens.clear();
     }
 
-    void  TokenTrie::reinitializeTrie() {
-        root = make_shared<TrieNode>(); // Reset the root of the trie
+    void TokenTrie::reinitializeTrie() {
+        root = std::make_shared<TrieNode>(); // Reset the root of the trie
         tokens.clear(); // Clear the tokens vector
     }
 
-    // Add more methods as needed...
-
 
 #pragma endregion
+

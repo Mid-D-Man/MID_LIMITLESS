@@ -1,0 +1,1 @@
+int getRandomVal(char val);

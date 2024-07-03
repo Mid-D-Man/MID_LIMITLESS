@@ -1,5 +1,4 @@
 
-
 #pragma once
 #include<string>
 #include<vector>
@@ -11,7 +10,6 @@ class TrieNode {
   public :  std::unordered_map<char, std::shared_ptr<TrieNode> > children;
   public :  bool isEndOfToken;
     public :Token token; // Store the token at the end node
-
 
     TrieNode();
 };

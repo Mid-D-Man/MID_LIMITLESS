@@ -1,15 +1,14 @@
 # depslib dependency file v1.0
-1719431449 source:/Users/midman/Desktop/MDL/MidLimitless/Token.cpp
-	<stdio.h>
+1719602016 source:/Users/midman/Desktop/MDL/MidLimitless/Token.cpp
 	"Token.hpp"
 
-1719348996 /Users/midman/Desktop/MDL/MidLimitless/Token.hpp
+1719602007 /Users/midman/Desktop/MDL/MidLimitless/Token.hpp
 	<string>
 	"SubToken.hpp"
 
 1719522853 /Users/midman/Desktop/MDL/MidLimitless/SubToken.hpp
 
-1719434595 source:/Users/midman/Desktop/MDL/MidLimitless/Lexer.cpp
+1719687522 source:/Users/midman/Desktop/MDL/MidLimitless/Lexer.cpp
 	<iostream>
 	<stack>
 	<memory>
@@ -18,17 +17,21 @@
 	<variant>
 	<regex>
 	"Lexer.hpp"
+	"TrieNode.cpp"
+	"Identifier.cpp"
+	"Token.cpp"
 
 1719354548 source:/Users/midman/Desktop/MDL/MidLimitless/Parser.cpp
 
-1719430113 source:/Users/midman/Desktop/MDL/MidLimitless/SubToken.cpp
+1719603172 source:/Users/midman/Desktop/MDL/MidLimitless/SubToken.cpp
 	"SubToken.hpp"
 
-1719435394 source:/Users/midman/Desktop/MDL/MidLimitless/Tester.cpp
+1719522857 source:/Users/midman/Desktop/MDL/MidLimitless/Tester.cpp
 	"Lexer.hpp"
 	<iostream>
+	<memory>
 
-1719430042 source:/Users/midman/Desktop/MDL/MidLimitless/Identifier.cpp
+1719603172 source:/Users/midman/Desktop/MDL/MidLimitless/Identifier.cpp
 	<stack>
 	<string>
 	<unordered_map>
@@ -39,13 +42,13 @@
 	<unordered_map>
 	<stack>
 
-1719431370 source:/Users/midman/Desktop/MDL/MidLimitless/TrieNode.cpp
+1719687482 source:/Users/midman/Desktop/MDL/MidLimitless/TrieNode.cpp
 	<string>
 	<vector>
 	"TrieNode.hpp"
 	<unordered_map>
 
-1719431390 /Users/midman/Desktop/MDL/MidLimitless/TrieNode.hpp
+1719687506 /Users/midman/Desktop/MDL/MidLimitless/TrieNode.hpp
 	<string>
 	<vector>
 	<unordered_map>
@@ -55,12 +58,28 @@
 	"Lexer.hpp"
 	<iostream>
 
-1719434639 /Users/midman/Desktop/MDL/MidLimitless/Lexer.hpp
+1719687676 /Users/midman/Desktop/MDL/MidLimitless/Lexer.hpp
 	<string>
 	<vector>
+	<stack>
 	"TrieNode.hpp"
 	"StateMachine.hpp"
 	"Identifier.hpp"
 
 1719434473 /Users/midman/Desktop/MDL/MidLimitless/StateMachine.hpp
+
+1719687482 /Users/midman/Desktop/MDL/MidLimitless/TrieNode.cpp
+	<string>
+	<vector>
+	"TrieNode.hpp"
+	<unordered_map>
+
+1719603172 /Users/midman/Desktop/MDL/MidLimitless/Identifier.cpp
+	<stack>
+	<string>
+	<unordered_map>
+	"Identifier.hpp"
+
+1719602016 /Users/midman/Desktop/MDL/MidLimitless/Token.cpp
+	"Token.hpp"
 

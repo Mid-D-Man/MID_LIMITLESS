@@ -9,25 +9,19 @@
 #include <regex>
 
 #include "Lexer.hpp"
-
+#include "TrieNode.cpp"
+#include "Identifier.cpp"
+#include "Token.cpp"
 using namespace std;
 #pragma region Actual Lexer Calss
-
-
  Lexer::Lexer (){
-TokenTrie trie;
+
  //stores the current state of the lexer
- LexerState currentState (LexerState::NormalState);
+  currentState = LexerState::NormalState;
  //stores the symbol table for identifiers
- SymbolTable symbols;
- //stores known important keyword tokens
-unordered_map<string, Token> keywordMap;
-//stores important character tokens
-unordered_map<char, Token> specialCharacterMap;
-//this is for handling processed tokens
-vector<Token> tokens;
-//keeps track of current token
-size_t currentTokenIndex (0);
+
+
+ currentTokenIndex = 0;
 
         tokens.clear();
         InitializeKeywordMap();
@@ -38,10 +32,10 @@ size_t currentTokenIndex (0);
 
         // Populate the trie with the keywords
         for (const auto& pair : keywordMap) {
-            trie.insert(Token(pair.first, TokenType::Keyword, pair.second.subTokenInfo));
+         trie.insert(Token(pair.first, TokenType::Keyword, pair.second.subTokenInfo));
         }
            for (const auto& pair : specialCharacterMap) {
-            trie.insert(Token(string(1,pair.first), TokenType::Keyword, pair.second.subTokenInfo));
+           trie.insert(Token(string(1,pair.first), TokenType::Keyword, pair.second.subTokenInfo));
         }
     }
 
@@ -380,11 +374,11 @@ return true;
 bool Lexer::isMemberDeclaration(Token currentToken,Token lastKnownToken,Token nextToken){
     if(currentToken.tokenValue == "const"){
         return true;
-    }else if(currentToken.subTokenInfo.subTokenType == SubTokenType::DataType && lastKnownToken.tokenType == TokenType::AccessModifier){
+    }else if((currentToken.subTokenInfo.subTokenType == SubTokenType::DataType )&& (lastKnownToken.tokenType == TokenType::AccessModifier)){
         return true;
-    }else if(currentToken.subTokenInfo.subTokenType == SubTokenType::DataType && nextToken.tokenType == TokenType::Null_Undefined || nextToken.tokenType == TokenType::Identifier){
+    }else if((currentToken.subTokenInfo.subTokenType == SubTokenType::DataType) && (nextToken.tokenType == TokenType::Null_Undefined || nextToken.tokenType == TokenType::Identifier)){
         return true;
-    }else if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType && currentToken.tokenType == TokenType::Null_Undefined || currentToken.tokenType == TokenType::Identifier && nextToken.tokenValue == "=" || TokenType::Identifier && nextToken.tokenValue == ";" ){
+    }else if((lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType )&& (currentToken.tokenType == TokenType::Null_Undefined || currentToken.tokenType == TokenType::Identifier && nextToken.tokenValue == "=" || TokenType::Identifier && nextToken.tokenValue == ";") ){
 return true;
     }else{
         return false;
@@ -395,7 +389,7 @@ return true;
 /*ok here is what we are going to do we need a class to store the default values of tokens the ones beign
 processed by the toknize readtoken function because in some cases we might have something like > =  instead of >= which is also valid
 but is actually only one token so in the defualt tken keeper we when we are classifying token and
-we encounter such a case first edit the current token we are classifying based on it and the next token
+we encounter such a case first edit the current token we are        classifying based on it and the next token
 and then edit the > and = and combine them into one token in the token keeper or something like that just get it to work*/
 
 Token Lexer::classifyToken(const Token& currentToken,Token lastKnownToken,Token nextToken){

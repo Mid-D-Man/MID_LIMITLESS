@@ -1,4 +1,4 @@
-#include <stdio.h>
+
 #include "Token.hpp"
 
 
@@ -26,5 +26,8 @@ switch(tokenType){
 
 
 }
-    }
+};
+
+
+
 

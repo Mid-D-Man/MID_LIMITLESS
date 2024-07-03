@@ -4,12 +4,11 @@
 #include "Identifier.hpp"
 
 
+
 using namespace std;
 
+//don
 SymbolTable::SymbolTable(){
-
- unordered_map<string,IdentifierInfo> globalTable;
- stack<unordered_map<string,IdentifierInfo> >scopeStack;
 
 };
 
