@@ -8,10 +8,9 @@ int main() {
  cout << "Start" << endl;
 
 
-
 //for lexet testing 
     Lexer lexer;
-    std::string sourceCode = "private class Abstractor : Base : { int value; float val2 = 0.225; public bool meSS = false;  public virtual void GetStuff:byte value,bool data:{/*do some stuff */}} public again; //Thats That";
+    std::string sourceCode = "private class _MyClass { private int return_MyVal:int dider,float cocain,bool moreData:{  var determiner = dider + 14; if(determiner > 12){moreData = false;}else{dider++; cocain / 0.5;}  } } \n //leFinal Comment \n /*Extra Comment var bool*/";
     auto tokens = lexer.tokenize(sourceCode);
 
     // Output the tokens for testing
