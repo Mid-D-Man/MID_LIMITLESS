@@ -3,16 +3,11 @@
 #include <unordered_map>
 #include "Identifier.hpp"
 
-
 using namespace std;
 
-//don
 SymbolTable::SymbolTable(){
 
 };
-
-
-
 
     void SymbolTable::enterScope(){
         unordered_map<string,IdentifierInfo> defaultVal ;

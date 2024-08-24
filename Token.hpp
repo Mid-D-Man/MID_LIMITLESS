@@ -2,9 +2,7 @@
 #pragma once
 #include <string>
 #include "SubToken.hpp"
-
-
-
+//all our token types
     enum TokenType{
         Null_Undefined,
         Keyword,

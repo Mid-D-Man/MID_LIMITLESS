@@ -1,6 +1,6 @@
 
 #pragma once
-
+//more specific token classification
 enum SubTokenType{
     //the default value
     Default,

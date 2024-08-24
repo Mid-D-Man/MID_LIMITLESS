@@ -12,6 +12,8 @@
 #include "TrieNode.cpp"
 #include "Identifier.cpp"
 #include "Token.cpp"
+#include "Utilities.cpp"
+
 using namespace std;
 #pragma region Actual Lexer Calss
  Lexer::Lexer (){
@@ -21,13 +23,17 @@ using namespace std;
  //stores the symbol table for identifiers
 
 
+
  currentTokenIndex = 0;
 
         tokens.clear();
         InitializeKeywordMap();
         InitializeSpecialCharacterMap();
-       symbols.enterScope();
-
+        symbols.enterScope();
+        //empty stack
+        lexerStateStack =stack<LexerStateStack>();
+     //stack<LexerStateStack>().swap(lexerStateStack);
+    
         // ... add other keywords and token types ...
 
         // Populate the trie with the keywords
@@ -50,11 +56,10 @@ if(isspace(ch)){
  return readNextToken(codeStream);
 }else if(isSpecialCharacter(ch)){
     //if its a secial character return it as a token imediately
- return specialCharacterMap.at(ch);
-
-}else if(ch == '/' ){
-
-        if(codeStream.peek() == '/'){
+    if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
+        tokenValue += ch;
+    }else if(ch == '/' ){
+    if(codeStream.peek() == '/'){
             //single line comment
         processComment(codeStream,tokens,false);
         tokenValue.clear();
@@ -63,10 +68,15 @@ if(isspace(ch)){
         processComment(codeStream,tokens,true);
         tokenValue.clear();
         }else{
-            tokenValue += ch;
+           return specialCharacterMap.at(ch);
         }
+//there should be another else for incomplete comment
+    }else{      
+ return specialCharacterMap.at(ch);
+ }
 
-      }else{
+//there is the case of . in float
+}else{
     if(!tokenValue.empty()){
         tokenValue += ch;
 break;
@@ -80,17 +90,24 @@ tokenValue += ch;
 
  while(codeStream.get(ch)){
 if(isspace(ch) || isSpecialCharacter(ch)){
-codeStream.unget();
+   if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
+        tokenValue += ch;
+    }else{
+ codeStream.unget();
 break;
+    }
 }else{
     tokenValue += ch;
 }
+}
+//can change tis to determine default token
+    Token defaultToken = determineDefaultTokenType(tokenValue);
+    //ok for stuff like int,bool and the likes that never change
+    //return them with from keyword map forom here
+   return defaultToken;
 
 }
 
-    TokenType type = determineDefaultTokenType(tokenValue);
-    return Token(tokenValue,type,SubTokenInfo());
-}
 
 Token Lexer::peekNextToken(istringstream& codeStream){
     streampos ogPos = codeStream.tellg(); //save current pos
@@ -117,42 +134,48 @@ return nextToken2;
 
 
 
-TokenType Lexer::determineDefaultTokenType(const string& tokenValue)const{
+Token Lexer::determineDefaultTokenType(string& tokenValue)const{
     //make light deep cheack for token and token type here
     //also make identifier table for storing identifiers when creating the actual tokens
-    if(keywordMap.find(tokenValue) != keywordMap.end()){
-     return keywordMap.at(tokenValue).tokenType;
+    if(isKeyword(tokenValue)){
+      return keywordMap.at(tokenValue);
     }else{
-       bool isIdentifier = isValidIdentifier(tokenValue);
-       string inNumericLiteral = cheackNumberType(tokenValue);
+       bool isIdentifier = Utilities().isValidIdentifier(tokenValue);
+       string inNumericLiteral = Utilities().cheackNumberType(tokenValue);
 
     if(isIdentifier){
-    return TokenType::Identifier;
-    }else if(inNumericLiteral == "Integer"|| inNumericLiteral == "Float"||inNumericLiteral == "Double" ){
-    return TokenType::Literial;
+    return Token(tokenValue,TokenType::Identifier,SubTokenInfo());
+    }else if(inNumericLiteral == "Integer"){
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer));
+    }else if( inNumericLiteral == "Float"){
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+    }else if(inNumericLiteral == "Double"){
+    //literal double
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
     }else{
-    return TokenType::Null_Undefined;
+    return Token();
     }
 
     }
-
 }
 
 #pragma endregion
 
-#pragma region  Helper Functions
+#pragma region  Helper Functionsh
 
 void Lexer::InitializeKeywordMap(){
  // Initialize the keywordMap map with keywords and their subtoken info
 //note only add keywords with one meaning no matter the context
- keywordMap["public"] = Token("AccessModifier",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
- keywordMap["private"] = Token("AccessModifier",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
- keywordMap["protected"] = Token("AccessModifier",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
-keywordMap["internal"] = Token("AccessModifier",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
-keywordMap["external"] = Token("AccessModifier",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+ keywordMap["public"] = Token("public",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+ keywordMap["private"] = Token("private",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+ keywordMap["protected"] = Token("protected",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+keywordMap["internal"] = Token("internal",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+keywordMap["external"] = Token("external",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+keywordMap["shegenYaro"] = Token("shegenYaro",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
 //cn = continue but for func declaration
-keywordMap["cn"] = Token("Keyword",TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
+keywordMap["cn"] = Token("cn",TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
 /*
+
 
 public internal bool returnMe:bool the:{
     internal bool returnme;
@@ -163,7 +186,7 @@ public internal bool returnMe:bool the:{
 */
 
 
-keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::ReturnType));
+        keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::ReturnType));
 
         keywordMap["class"] = Token("class",TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
 
@@ -174,23 +197,23 @@ keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::
         keywordMap["float"] = Token("float",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
         keywordMap["double"] = Token("double",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
         keywordMap["var"] = Token("var",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-  keywordMap["virtual"] = Token("virtual",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
-  keywordMap["abstract"] = Token("abstract",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
+        keywordMap["virtual"] = Token("virtual",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
+        keywordMap["abstract"] = Token("abstract",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
 
 
-         keywordMap["="] = Token("=",TokenType::Operator,SubTokenInfo(SubTokenType::Assign));
-         keywordMap["+"] = Token("+",TokenType::Operator,SubTokenInfo(SubTokenType::Addition));
-            keywordMap["-"] = Token("-",TokenType::Operator,SubTokenInfo(SubTokenType::Subtract));
-            keywordMap["*"] = Token("*",TokenType::Operator,SubTokenInfo(SubTokenType::Multiply));
-            keywordMap["/"] = Token("/",TokenType::Operator,SubTokenInfo(SubTokenType::Divide));
-            keywordMap["%"] = Token("%",TokenType::Operator,SubTokenInfo(SubTokenType::Modulos));
-
-             keywordMap["=="] = Token("==",TokenType::Operator,SubTokenInfo(SubTokenType::EqualTo));
-         keywordMap["+="] = Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Add_Assign));
+            keywordMap["=="] = Token("==",TokenType::Operator,SubTokenInfo(SubTokenType::EqualTo));
+            keywordMap["++"] = Token("++",TokenType::Operator,SubTokenInfo(SubTokenType::Increment));
+            keywordMap["--"] = Token("--",TokenType::Operator,SubTokenInfo(SubTokenType::Decrement));
+            keywordMap["+="] = Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Add_Assign));
             keywordMap["-="] = Token("-=",TokenType::Operator,SubTokenInfo(SubTokenType::Sub_Assign));
             keywordMap["*="] = Token("*=",TokenType::Operator,SubTokenInfo(SubTokenType::Mul_Assign));
             keywordMap["/="] = Token("/=",TokenType::Operator,SubTokenInfo(SubTokenType::Div_Assign));
             keywordMap["%="] = Token("%=",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign));
+            keywordMap[">="] = Token(">=",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThanOrEqualTo));
+            keywordMap["<="] = Token("<=",TokenType::Operator,SubTokenInfo(SubTokenType::LessThanOrEqualTo));
+            //random range
+            keywordMap[">_<"] = Token(">_<",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign));
+
 
 
             keywordMap["if"] = Token("if",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
@@ -203,9 +226,9 @@ keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::
 
             keywordMap["struct"] = Token("struct",TokenType::Keyword,SubTokenInfo(SubTokenType::DataStructure));
 
-
-
-
+            keywordMap["use"] = Token("use",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
+            keywordMap["include"] = Token("include",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
+            keywordMap["summon"] = Token("summon",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
 
 }
 
@@ -221,13 +244,24 @@ specialCharacterMap[']'] = Token("]",TokenType::Seprator,SubTokenInfo(SubTokenTy
 specialCharacterMap[':'] = Token(":",TokenType::Seprator,SubTokenInfo(SubTokenType::Default));
 specialCharacterMap[';'] = Token(";",TokenType::Seprator,SubTokenInfo(SubTokenType::SemiColon));
 specialCharacterMap[','] = Token(",",TokenType::Seprator,SubTokenInfo(SubTokenType::Comma));
+specialCharacterMap['='] = Token("=",TokenType::Operator,SubTokenInfo(SubTokenType::Assign));
+specialCharacterMap['+'] = Token("+",TokenType::Operator,SubTokenInfo(SubTokenType::Addition));
+specialCharacterMap['-'] = Token("-",TokenType::Operator,SubTokenInfo(SubTokenType::Subtract));
+specialCharacterMap['*'] = Token("*",TokenType::Operator,SubTokenInfo(SubTokenType::Multiply));
+specialCharacterMap['/'] = Token("/",TokenType::Operator,SubTokenInfo(SubTokenType::Divide));
+specialCharacterMap['%'] = Token("%",TokenType::Operator,SubTokenInfo(SubTokenType::Modulos));
+specialCharacterMap['>'] = Token(">",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThan));
+specialCharacterMap['<'] = Token("<",TokenType::Operator,SubTokenInfo(SubTokenType::LessThan));
 
 }
 
 
+
 void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, bool isMultiLine){
+    try{
     string comment;
     char ch;
+    
     if(isMultiLine){
         comment = "/*";
         //consume *
@@ -251,72 +285,39 @@ void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, boo
     }
 
     tokens.push_back(Token(comment,TokenType::Comment,SubTokenInfo()));
+    }catch(exception e){
+        cout << e.what() << "\n";
+    }
 }
 
-
+//just use special character map
 bool Lexer::isSpecialCharacter(char ch)const{
     //define all special characters that should be tokenized individually
 return specialCharacterMap.find(ch) != specialCharacterMap.end();
-    const string specialCharacters = ";<>{}[]:(),.";
 }
 
-bool Lexer::isWhiteSpace(char ch){
-    return isspace(ch);
-}
-
-bool Lexer::isEndOfLine(char c){
-    bool result = (c == '\n') || (c == '\r');
-    return result;
-}
-
-bool Lexer::isNumeric(char c){
-    bool result = false;
-
-    if((c >= '0')&& (c <='9')) result = true;
-
-    return result;
-}
-
-bool Lexer::isLetter(char c){
-    bool result = false;
-    if((c >= 'A') && (c <= 'Z')) result = true;
-       if((c >= 'a') && (c <= 'z')) result = true;
-
-       return result;
+bool Lexer::isCombinableSpecialCharacter(char ch)const{
+    //define all special characters that should be tokenized individually
+    regex pattern("[-*%=+><]");
+    return regex_match(string(1,ch),pattern);
 }
 
 
- bool Lexer::isValidIdentifierChar(char ch){
-    return isalnum(ch) || ch == '_';
-}
-
-bool Lexer::isValidIdentifier(string tokenValue)const{
-
-regex identifierRex(R"(@?[a-zA-Z_]\w*)");
-return regex_match(tokenValue,identifierRex);
-
-}
-
-string Lexer::cheackNumberType(string tokenValue)const{
-    regex numRegex(R"([+-]?(\d+\.\d*|\.\d+|\d+)([eE][-+]?\d+)?)");
-if(regex_match(tokenValue,numRegex)){
-    if(tokenValue.find('.') == std::string::npos){
-return "Integer";
+bool  Lexer::isKeyword(string& tokenValue)const{
+  if(keywordMap.find(tokenValue) != keywordMap.end()){
+     return true;
     }else{
-        if(sizeof(float) == sizeof(double)){
-            return "Double";
-        }else{
-            return "Float";
-        }
+        return false;
     }
-}else{
-    return "Not A Valid Number";
 }
 
-}
+
+
+
 #pragma endregion
 
-
+#pragma region  Tokinization
+//ok for now we are going  use the regular () for func and stuff how ever at the end we shalt
     vector<Token> Lexer::tokenize(const string& sourceCode) {
 
         istringstream codeStream(sourceCode);
@@ -327,26 +328,29 @@ return "Integer";
 //notice we must handle whitespace tokenization,comment tokenization seprate from regular token tokenization,
 //for they must be processed in chars while regular tokens must be processed in words
 //keep in mind we dont actually have to handle whitespace unless we have a use for them
+//& = ref * = pointer
 while(codeStream){
     currentToken = readNextToken(codeStream);
-//this works now fix handle comments and fixify
-   /* if(!currentToken.isValid()){
-        break;
-    }
-    */
-    if(currentTokenIndex > 0 && tokens.capacity() > 0 && tokens[currentTokenIndex -1].tokenType != TokenType::WhiteSpace &&  tokens[currentTokenIndex -1].tokenType != TokenType::Comment ){
-        lastKnownValidToken =  tokens[currentTokenIndex -1];
+
+    if(currentTokenIndex > 0 && tokens.capacity() > 0 && tokens[currentTokenIndex -1].tokenType != TokenType::WhiteSpace &&  tokens[currentTokenIndex -1].tokenType != TokenType::Comment &&  tokens[currentTokenIndex -1].tokenType != TokenType::Null_Undefined ){
+        lastKnownValidToken = tokens[currentTokenIndex -1];
+    }else{
+    lastKnownValidToken = Token();
     }
     nextToken = peekNextToken(codeStream);
 
-//we already modifying current token based on &
-    ++currentTokenIndex;
    Token fullyClassifiedToken = classifyToken(currentToken,lastKnownValidToken,nextToken);
     //trie.insert(fullyClassifiedToken);
      tokens.push_back(fullyClassifiedToken);
 
+    ++currentTokenIndex;
+
+    cout << "After Cheacks Our Current Lex State Is : " << currentState << " : With Returned Value Of : " << fullyClassifiedToken.tokenValue << "\n" << endl;
     cout << "Current Token Value Is :: " << currentToken.tokenValue << " :: And Next Token IS :: " << nextToken.tokenValue << "\n :: And Last Known Token From Current Token Is ::" << lastKnownValidToken.tokenValue << endl ;
+
 }
+
+
 
   return tokens;
 
@@ -359,32 +363,50 @@ return true;
     return false;
 }
 }
+string Lexer::getDeclarationType(Token& currentToken,Token& lastKnownToken,Token& nextToken){
 
-bool Lexer::isFunctionDeclaration(Token currentToken,Token lastKnownToken,Token nextToken){
-if(isValidFunctionReturnType(currentToken) && lastKnownToken.tokenType == TokenType::AccessModifier){
-return true;
-}else if(currentToken.tokenType == TokenType::Identifier || currentToken.tokenType == TokenType::Null_Undefined && isValidFunctionReturnType(lastKnownToken) && nextToken.tokenValue == ":" ){
-return true;
+if(currentToken.tokenValue == "const" || currentToken.tokenValue == "var" ){
+    return "Member";
+}else if(isPredefinedReturnType(lastKnownToken.tokenValue) && Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == "=" ||  nextToken.tokenValue == ";"){
+   return "Member";
+}else if(isPredefinedReturnType(lastKnownToken.tokenValue) && Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == ":" ||  nextToken.tokenValue == "("){
+    return "Function";
 }else{
-    return false;
+    return "Error";
 }
 
 }
 
-bool Lexer::isMemberDeclaration(Token currentToken,Token lastKnownToken,Token nextToken){
-    if(currentToken.tokenValue == "const"){
+bool Lexer::isPredefinedReturnType(std::string& tokenVal){
+    //this needs better implementation
+    if(tokenVal == "int" || tokenVal == "bool" || tokenVal == "float"|| tokenVal == "double" || tokenVal == "string" || tokenVal == "char" || tokenVal == "void"){
         return true;
-    }else if((currentToken.subTokenInfo.subTokenType == SubTokenType::DataType )&& (lastKnownToken.tokenType == TokenType::AccessModifier)){
-        return true;
-    }else if((currentToken.subTokenInfo.subTokenType == SubTokenType::DataType) && (nextToken.tokenType == TokenType::Null_Undefined || nextToken.tokenType == TokenType::Identifier)){
-        return true;
-    }else if((lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType )&& (currentToken.tokenType == TokenType::Null_Undefined || currentToken.tokenType == TokenType::Identifier && nextToken.tokenValue == "=" || TokenType::Identifier && nextToken.tokenValue == ";") ){
-return true;
     }else{
         return false;
     }
 }
 
+Token Lexer::tryGetDoubleCombinableToken(Token firstToken,Token secondToken){
+string newTokenVal;
+newTokenVal += firstToken.tokenValue[0];
+newTokenVal += secondToken.tokenValue[0];
+
+  cout << "Quick Look " << newTokenVal << "\n";
+//mhh due to the fact we got operators with 3 chars we cant just use current,nexttoken,we gotta use last to
+ if(isKeyword(newTokenVal)){
+    //also find a way to remove the currentToken or both current Token And next,last token to make sure only the combine 
+    //one gets returned may be use a pointer or something
+   
+   return keywordMap.at(newTokenVal);
+    }else{
+return Token();
+    }
+
+}
+
+#pragma endregion
+
+#pragma region  Token Classification
 
 /*ok here is what we are going to do we need a class to store the default values of tokens the ones beign
 processed by the toknize readtoken function because in some cases we might have something like > =  instead of >= which is also valid
@@ -392,119 +414,310 @@ but is actually only one token so in the defualt tken keeper we when we are clas
 we encounter such a case first edit the current token we are        classifying based on it and the next token
 and then edit the > and = and combine them into one token in the token keeper or something like that just get it to work*/
 
-Token Lexer::classifyToken(const Token& currentToken,Token lastKnownToken,Token nextToken){
+Token Lexer::classifyToken( Token& currentToken,Token lastKnownToken,Token nextToken){
     //always start from lastknown token type
 //this function will handle the actual tokenization and place tokens In Actual Token Or Use The Tier
 
-//before we run the state based switch we decide the current state
-//encounterd prob when we read float 0.255 it reads . and  255 as two seprate tokens
+//for code comsumption retokening
+/*
+else if(currentToken.tokenValue == "+" && nextToken.tokenValue == "="){
+    //this code consumption retokening is for latter
+     return Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Bit_ShiftRight));
+
+    }
+*/
+
 
 switch(currentState){
 
     case LexerState::NormalState:{
+        //note when we are in normal state anything aside from
+        //class ,struct,interface,preprossesordirectiory,namespace,and the likes 
+        //is an error
  if(currentToken.tokenValue == "class"){
 
 currentState = ClassDeclaration;
-
-return Token(currentToken.tokenValue,TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
-}else if(currentToken.tokenValue == "+" && nextToken.tokenValue == "="){
-        return Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Bit_ShiftRight));
-
-    }else if(isFunctionDeclaration(currentToken,lastKnownToken,nextToken)){
-currentState = FunctionDeclaration;
-}else if(lastKnownToken.tokenType == TokenType::Keyword && lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType){
-
-    //meaning we has int,bool or the likes
-    //that means the current token is an identifire but we also need to cheack the next token
-    //if the next token is a ( or : that means we are entering function declaration state
-    //but if the next token is a = or ; it means we are creating a member since we are in normal state
-     Token returnToken = Token( currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
-   if(symbols.getIdentifier(returnToken.tokenValue) == nullptr){
-
-IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::MemberIdentifier);
-symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
-
-   }
-return returnToken;
-
-}else if(isMemberDeclaration(currentToken,lastKnownToken,nextToken)){
-    currentState = MemberDeclaration;
+lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}else{
+    //also an error
+      cout << "Some Error Except For Case Of " << endl;
+      //make for sturct to but start with class
 }
 
-    }break;
-case ClassBody:{
+}break;
+       case ClassDeclaration:{
+
+if(lastKnownToken.tokenValue == "class" && Utilities().isValidIdentifier(currentToken.tokenValue)){
+    //that means current token should be an identifier
+   Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+
+   if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::ClassIdentifier);
+symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
+cout << " Added Identifier " << currentToken.tokenValue << " As Class Identifier " << endl;
+   }
+
+   return returnToken;
+}else if(lastKnownToken.tokenType == TokenType::Identifier && currentToken.tokenValue == ":"){
+currentState = ClassInheritanceList;
+}else if(currentToken.tokenValue == "{"){
+    encloseSymbolsStack.push(currentToken.tokenValue[0]);
+    currentState = ClassBody;
+
+  lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}
 
 }
 break;
 case ClassInheritanceList:{
+//deal with this latter and remove from the tester for now just incase
+}
+
+case ClassBody:{
+if(currentToken.tokenValue == "}"){
+    //that means either we have reached the end of the class or there is some excess close brace
+    //prbably an error
+   if(!encloseSymbolsStack.empty()){
+    encloseSymbolsStack.pop();
+    currentState = NormalState;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+   }else{
+    cout << "Error MissMatched Braces Too Many Braces" << endl;
+   }
+}
+
+//this requires serious work
+    //change state to member declaration or something
+    string declarationType = getDeclarationType(currentToken,lastKnownToken,nextToken);
+
+    if(declarationType == "Member"){
+//deal with case of public in myval,int,bah,dud; latter
+        currentState = MemberDeclaration;
+        lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+      if(currentToken.tokenType == TokenType::Identifier){
+
+      Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+
+   if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::MemberIdentifier);
+symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
+cout << " Added Identifier " << currentToken.tokenValue << " As Member Identifier " << endl;
+   }
+   return returnToken;
+    }
+}else if(declarationType == "Function"){
+        currentState = FunctionDeclaration;
+        lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+    if(currentToken.tokenType == TokenType::Identifier){
+
+      Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+
+   if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::FunctionIdentifier);
+symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
+cout << " Added Identifier " << currentToken.tokenValue << " As Function Identifier " << endl;
+   }
+
+   return returnToken;
+    }
 
 }
+
+//also at the end make cheack of stack
+//nou dont cheack if its emty here because we hav diff symbols /{} : and the likes make
+//better cheack algo for each diff symbol latter
+if(encloseSymbolsStack.empty()){
+    cout << "All Open And Close Symbols Are Matched Perfectly To Error" << endl;
+      currentState = NormalState;
+      lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}else{
+   cout << "Error MissMatched Open And Close Symbols Too Many Open And Close Symbols" << endl;
+}
+}
+break;
 
 break;
 case MemberList:{
 
 }
 break;
-      case ClassDeclaration:{}
-break;
        case MemberDeclaration:{
+//prob
+if(currentToken.subTokenInfo.subTokenType == SubTokenType::SemiColon){
+//go back to class body
+currentState = ClassBody;
+lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}else if(Utilities().isNumeric(currentToken.tokenValue[0])){
+  
+auto numType = Utilities().cheackNumberType(currentToken.tokenValue);
+if(numType == "Integer"){
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer));
 
- if(currentToken.subTokenInfo.subTokenType == SubTokenType::DataType && lastKnownToken.tokenType == TokenType::AccessModifier || lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType){
-       Token returnToken = Token( currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
-   if(symbols.getIdentifier(returnToken.tokenValue) == nullptr){
+}else if(numType == "Float"){
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
 
-IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::MemberIdentifier);
-symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
-return returnToken;
-   }
-    }
-       }
+}else if(numType == "Double"){
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+
+}else{
+cout << "Unknown Number Type";
+}
+
+}else if(lastKnownToken.tokenValue == "=" || lastKnownToken.tokenValue == "@" && currentToken.tokenValue[0] == '"'){
+    //we be in string literal state or concactianation
+    currentState = StringLiteral;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}
+//fix this place better
+    
+ }
 
     break;
       case FunctionDeclaration:{
-
-if(lastKnownToken.tokenType == TokenType::Identifier && currentToken.tokenValue == ":"){
+if(currentToken.tokenValue == ":" || currentToken.tokenValue == "("){
 currentState = ParameterList;
-Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon));
-}else if(lastKnownToken.tokenValue == ":" && currentToken.tokenValue == "{")
-Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace));
- currentState = FunctionBody;
+lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+encloseSymbolsStack.push(currentToken.tokenValue[0]);
+if(currentToken.tokenValue == ":"){
+return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon));
+}
 }
 
-    break;
+        }  break;
       case ParameterList:{
-if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType){
+if(currentToken.tokenValue == ":" || currentToken.tokenValue == ")" ){
+    //that means we out of func param list
+    currentState = FunctionBody;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+  if(!encloseSymbolsStack.empty()){
+    encloseSymbolsStack.pop();
+   }else{
+    cout << "Error MissMatched Braces Too Many Braces" << endl;
+   }
+   if(currentToken.tokenValue == ":"){
+return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon));
+}
+//remeber diff stuff can be passed as params i.e classs and stuffin,bool,structs defined
+}else if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType && Utilities().isValidIdentifier(currentToken.tokenValue)){
+    //that means currentToken is a parameter identifier
    Token returnToken = Token( currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
    if(symbols.getIdentifier(returnToken.tokenValue) == nullptr){
 
 IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::ParameterIdentifier);
 symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
-
+cout << " Added Identifier " << currentToken.tokenValue << " As Parameter Identifier " << endl;
    }
 
    return returnToken;
 }
+//dont forget about multiple params i.e int hhh,bool dude and so on
       }
 
-
-
-
     break;
-     case VaraibleDeclaration:{
-
-     }
-
-    break;
-
      case FunctionBody:{
+        //hmmm
+if(currentToken.tokenValue == "{"){
+
+encloseSymbolsStack.push(currentToken.tokenValue[0]);
+  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace));
+  return returnToken;
+}else if(currentToken.tokenValue == "}"){
+
+     if(!encloseSymbolsStack.empty()){
+       encloseSymbolsStack.pop();
+       //return to class body cause u can only have funcs within a class
+        currentState = ClassBody;
+        lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+ }else{
+cout <<  "\n Miss Matched Symbols in symbol stack";
+    currentState = NormalState;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+ }
+ 
+  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBrace));
+  return returnToken;
+}else if(currentToken.subTokenInfo.subTokenType == SubTokenType::ControlStructure){
+    currentState = Statement;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+
+    }else if(isCombinableSpecialCharacter(lastKnownToken.tokenValue[0]) && isCombinableSpecialCharacter(currentToken.tokenValue[0])){
+     Token combinedToken = tryGetDoubleCombinableToken(lastKnownToken,currentToken);
+     if(combinedToken.tokenType != TokenType::Null_Undefined){
+        return combinedToken;
+     }
+}
+
+
+ }
+    case VaraibleDeclaration:{
 
      }
 
     break;
+    break;
+    //probably replace with if,else,do,while,swich statement states i think
          case Statement:{
 
-         }
+if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::ControlStructure && currentToken.tokenValue == ":" || currentToken.tokenValue == "("){
+encloseSymbolsStack.push(currentToken.tokenValue[0]);
+if( currentToken.tokenValue == ":"){
+    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon));
+}
+}else if(currentToken.tokenValue == ":" || currentToken.tokenValue == ")" && nextToken.tokenValue == "{"){
 
+currentState = StatementBody;
+lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+
+if( currentToken.tokenValue == ":"){
+    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon));
+}
+  if(!encloseSymbolsStack.empty()){
+       encloseSymbolsStack.pop();
+ }else{
+cout <<  "\n Miss Matched Symbols in symbol stack";
+    currentState = NormalState;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+ }
+}else if(currentToken.tokenValue == "{"){
+    encloseSymbolsStack.push(currentToken.tokenValue[0]);
+    //that means this be else statement
+    currentState = StatementBody;
+lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+
+}
+
+}
+
+    break;
+    case StatementBody:{
+
+        if(currentToken.tokenValue == "{"){
+            encloseSymbolsStack.push(currentToken.tokenValue[0]);
+        }else if(currentToken.tokenValue == "}"){
+//that means we out of state body however we need to pop twice since last state is statement not func body
+//so gotta make method to double pop
+    currentState = getValidLastKnownLexerStateDoublePop(lexerStateStack).currentState;
+      lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+    
+        }else if(isCombinableSpecialCharacter(lastKnownToken.tokenValue[0]) && isCombinableSpecialCharacter(currentToken.tokenValue[0]) && isCombinableSpecialCharacter(nextToken.tokenValue[0])){
+
+string newTokenVal;
+newTokenVal += lastKnownToken.tokenValue[0];
+newTokenVal += currentToken.tokenValue[0];
+newTokenVal += nextToken.tokenValue[0];
+//mhh due to the fact we got operators with 3 chars we cant just use current,nexttoken,we gotta use last to
+ if(isKeyword(newTokenVal)){
+    //also find a way to remove the currentToken or both current Token And next,last token to make sure only the combine 
+    //one gets returned may be use a pointer or something
+return keywordMap.at(newTokenVal);
+    }else{
+        //the combinable token tot defined in keyword map as it should
+  
+    }
+}
+
+    }
+    
     break;
           case StringLiteral:{
 
@@ -516,44 +729,48 @@ symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
          }
 
     break;
+       case NameSpaceDeclaration:{
+
+         }
+
+    break;
+       case NameSpaceBody:{
+
+         }
+
+    break;
 
 }
 
-cout << "After Cheacks Our Current Lex State Is" << currentState;
-currentState = NormalState;
 return Token(currentToken.tokenValue,currentToken.tokenType,currentToken.subTokenInfo);
 }
 
 
-
-
+#pragma endregion
 
 #pragma region  Extra Important Token Functions
 
-Token Lexer::getValidLastKnownToken(const std::string& tokenValue){
-  //cheack for last known token if any can also cheack token befor last token for in case of for loop or something
-    //ok we have already handled if the last knwon token is white space or comment in which case
-    //we cheak if there is a token before that and cheack the token type for it then
-    Token lastKnownToken =  Token();
+ LexerStateStack Lexer::getValidLastKnownLexerState(stack<LexerStateStack>& lexerStateStack){
 
-    if(currentTokenIndex > 0 && tokens[currentTokenIndex -1].tokenType != TokenType::WhiteSpace &&  tokens[currentTokenIndex -1].tokenType != TokenType::Comment ){
-        lastKnownToken =  tokens[currentTokenIndex -1];
-    }else{
-cout << "Last Known Token Type Was Comment Or White Space";
-if(currentTokenIndex > 1 && tokens[currentTokenIndex -1].tokenType != TokenType::WhiteSpace &&  tokens[currentTokenIndex -1].tokenType != TokenType::Comment ){
- lastKnownToken =  tokens[currentTokenIndex -2];
-}
+lexerStateStack.pop();
+return lexerStateStack.top();
+
+ }
+ 
+  LexerStateStack Lexer::getValidLastKnownLexerStateDoublePop(stack<LexerStateStack>& lexerStateStack){
+lexerStateStack.pop();
+lexerStateStack.pop();
+return lexerStateStack.top();
+
+ }
+vector<LexerStateStack> Lexer::returnAllLexerStatesInAccendingOrder(stack<LexerStateStack>& lexerStateStack){
+    vector<LexerStateStack> lexVector;
+    while(!lexerStateStack.empty()){
+lexVector.emplace_back(lexerStateStack.top());
     }
-
-    //logic to classify the current token
-
-cout << "Valid Known Token Is : " << TokenTypeToString(lastKnownToken.tokenType) << "With value : " << lastKnownToken.tokenValue << endl;
-return lastKnownToken;
+    return lexVector;
 
 }
-
-
-
 
  void Lexer::handleError(){
 

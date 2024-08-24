@@ -1,7 +1,7 @@
 
 #include "Token.hpp"
 
-
+//function to return token type to string  note:can probably do a better job here
 const char* TokenTypeToString(TokenType tokenType){
 switch(tokenType){
     case Keyword: return "Keyword";
