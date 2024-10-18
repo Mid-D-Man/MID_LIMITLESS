@@ -3,6 +3,10 @@
 #include <map>
 
 using namespace std;
+// call this from the twster script
+// and pass the tokenized lwxer tokens as the params
+// now im not sure how i should parse but use the ebnf as a ref i belive u take a token if its a certine type you try to parse it by cheacking if it conforms to the ebnf rules
+
 
 //yeah this requires a whole lotta work
 map<string,int> symbolTable;
