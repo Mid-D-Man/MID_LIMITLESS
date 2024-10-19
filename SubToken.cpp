@@ -19,6 +19,10 @@ switch(subTokenType){
         case CloseBracket: return "CloseBracket";
         case OpenColon: return "OpenColon";
         case CloseColon: return "CloseColon";
+          case OpenDoubleQuote: return "OpenDoubleQuote";
+            case CloseDoubleQuote: return "CloseDoubleQuote";
+             case OpenSingleQuote: return "OpenSingleQuote";
+            case CloseSingleQuote: return "CloseSingleQuote";
      case SemiColon: return "SemiColon";
       case Comma: return "Comma";
         case Elipses: return "Elipses";
@@ -82,8 +86,13 @@ switch(subTokenType){
         case Literal_Integer: return "Literal_Integer";
         case Literal_Character: return "Literal_Character";
         case Literal_Float: return "Literal_Float";
+        case Literal_Double: return "Literal_Double";
+        case Literal_Bool: return "Literal_Bool";
 
         case ClassModifier: return "ClassModifier";
-        case FunctionModifier: return "FunctionModifier";
+        case FunctionModifier: return "FunctionModifier";//abstrat,virtual
+        case FunctionStarter: return "FunctionStarter";
+
+
 
 }};

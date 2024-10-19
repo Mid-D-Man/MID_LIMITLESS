@@ -13,6 +13,7 @@
 #include "Identifier.cpp"
 #include "Token.cpp"
 #include "Utilities.cpp"
+#include "Error.cpp"
 
 using namespace std;
 #pragma region Actual Lexer Calss
@@ -22,45 +23,68 @@ using namespace std;
   currentState = LexerState::NormalState;
  //stores the symbol table for identifiers
 
+ //gotta figure out the column num increment
 
-
- currentTokenIndex = 0;
-
+currentTokenIndex = 0;
+lenientMode = true;
+currentLineNumber = 1;
+currentColumnNumber = 1;
         tokens.clear();
         InitializeKeywordMap();
         InitializeSpecialCharacterMap();
         symbols.enterScope();
         //empty stack
-        lexerStateStack =stack<LexerStateStack>();
+        lexerStateStack = stack<LexerStateStack>();
      //stack<LexerStateStack>().swap(lexerStateStack);
-    
+    //this just for test
+  
         // ... add other keywords and token types ...
 
         // Populate the trie with the keywords
         for (const auto& pair : keywordMap) {
-         trie.insert(Token(pair.first, TokenType::Keyword, pair.second.subTokenInfo));
+         trie.insert(Token(pair.first, TokenType::Keyword, pair.second.subTokenInfo,pair.second.locationInfo));
         }
            for (const auto& pair : specialCharacterMap) {
-           trie.insert(Token(string(1,pair.first), TokenType::Keyword, pair.second.subTokenInfo));
+           trie.insert(Token(string(1,pair.first), TokenType::Keyword, pair.second.subTokenInfo,pair.second.locationInfo));
         }
     }
 
 #pragma region Token lookAheadBuffer
-Token  Lexer::readNextToken(istringstream& codeStream){
+Token Lexer::readNextToken(istringstream& codeStream){
     char ch;
+    string line;
     string tokenValue;
+   
+
     //make sure token value is not empty
 while(codeStream.get(ch)){
-
 if(isspace(ch)){
  return readNextToken(codeStream);
-}else if(isSpecialCharacter(ch)){
+}else if(ch == '\n'){
+currentLineNumber ++;
+currentColumnNumber = 1;
+}else if(ch == '\t'){
+currentColumnNumber += 4;
+    }else if(isSpecialCharacter(ch)){
     //if its a secial character return it as a token imediately
     if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
         tokenValue += ch;
-    }else if(ch == '/' ){
+    }else if(isCombinableSpecialCharacter(ch) && isCombinableSpecialCharacter(codeStream.peek())){
+      string newVal;
+      newVal += ch;
+      newVal += codeStream.peek();
+
+      if(isKeyword(newVal)){
+codeStream.get();
+return keywordMap.at(newVal);
+      }
+//comback and handle string literals latter
+    }else if(ch == '"'){
+      //gotta figure this shit out
+      }else if(ch == '/' ){
     if(codeStream.peek() == '/'){
             //single line comment
+        
         processComment(codeStream,tokens,false);
         tokenValue.clear();
       }else if(codeStream.peek() == '*'){
@@ -85,10 +109,13 @@ tokenValue += ch;
     }
 
 }
-
+currentColumnNumber ++;
 }
 
+
+//pretty sure this is for putting stuff back into the codeStream
  while(codeStream.get(ch)){
+
 if(isspace(ch) || isSpecialCharacter(ch)){
    if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
         tokenValue += ch;
@@ -96,10 +123,12 @@ if(isspace(ch) || isSpecialCharacter(ch)){
  codeStream.unget();
 break;
     }
+    
 }else{
     tokenValue += ch;
 }
 }
+
 //can change tis to determine default token
     Token defaultToken = determineDefaultTokenType(tokenValue);
     //ok for stuff like int,bool and the likes that never change
@@ -144,14 +173,14 @@ Token Lexer::determineDefaultTokenType(string& tokenValue)const{
        string inNumericLiteral = Utilities().cheackNumberType(tokenValue);
 
     if(isIdentifier){
-    return Token(tokenValue,TokenType::Identifier,SubTokenInfo());
+    return Token(tokenValue,TokenType::Identifier,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber));
     }else if(inNumericLiteral == "Integer"){
-    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer));
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer),TokenLocationInfo(currentLineNumber,currentColumnNumber));
     }else if( inNumericLiteral == "Float"){
-    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float),TokenLocationInfo(currentLineNumber,currentColumnNumber));
     }else if(inNumericLiteral == "Double"){
     //literal double
-    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float),TokenLocationInfo(currentLineNumber,currentColumnNumber));
     }else{
     return Token();
     }
@@ -166,14 +195,14 @@ Token Lexer::determineDefaultTokenType(string& tokenValue)const{
 void Lexer::InitializeKeywordMap(){
  // Initialize the keywordMap map with keywords and their subtoken info
 //note only add keywords with one meaning no matter the context
- keywordMap["public"] = Token("public",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
- keywordMap["private"] = Token("private",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
- keywordMap["protected"] = Token("protected",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
-keywordMap["internal"] = Token("internal",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
-keywordMap["external"] = Token("external",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
-keywordMap["shegenYaro"] = Token("shegenYaro",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default));
+ keywordMap["public"] = Token("public",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+ keywordMap["private"] = Token("private",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+ keywordMap["protected"] = Token("protected",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+keywordMap["internal"] = Token("internal",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+keywordMap["external"] = Token("external",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+keywordMap["shegenYaro"] = Token("shegenYaro",TokenType::AccessModifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 //cn = continue but for func declaration
-keywordMap["cn"] = Token("cn",TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
+keywordMap["cn"] = Token("cn",TokenType::Keyword,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 /*
 
 
@@ -186,74 +215,84 @@ public internal bool returnMe:bool the:{
 */
 
 
-        keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::ReturnType));
+        keywordMap["void"] = Token("void",TokenType::Keyword,SubTokenInfo(SubTokenType::ReturnType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
-        keywordMap["class"] = Token("class",TokenType::Keyword,SubTokenInfo(SubTokenType::Default));
+        keywordMap["class"] = Token("class",TokenType::Keyword,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
-        keywordMap["int"] = Token("int",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["bool"] = Token("bool",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["char"] = Token("char",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["string"] = Token("string",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["float"] = Token("float",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["double"] = Token("double",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["var"] = Token("var",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType));
-        keywordMap["virtual"] = Token("virtual",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
-        keywordMap["abstract"] = Token("abstract",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier));
+        keywordMap["int"] = Token("int",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["bool"] = Token("bool",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["char"] = Token("char",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["string"] = Token("string",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["float"] = Token("float",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["double"] = Token("double",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["var"] = Token("var",TokenType::Keyword,SubTokenInfo(SubTokenType::DataType),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["virtual"] = Token("virtual",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+        keywordMap["abstract"] = Token("abstract",TokenType::Keyword,SubTokenInfo(SubTokenType::FunctionModifier),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
 
-            keywordMap["=="] = Token("==",TokenType::Operator,SubTokenInfo(SubTokenType::EqualTo));
-            keywordMap["++"] = Token("++",TokenType::Operator,SubTokenInfo(SubTokenType::Increment));
-            keywordMap["--"] = Token("--",TokenType::Operator,SubTokenInfo(SubTokenType::Decrement));
-            keywordMap["+="] = Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Add_Assign));
-            keywordMap["-="] = Token("-=",TokenType::Operator,SubTokenInfo(SubTokenType::Sub_Assign));
-            keywordMap["*="] = Token("*=",TokenType::Operator,SubTokenInfo(SubTokenType::Mul_Assign));
-            keywordMap["/="] = Token("/=",TokenType::Operator,SubTokenInfo(SubTokenType::Div_Assign));
-            keywordMap["%="] = Token("%=",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign));
-            keywordMap[">="] = Token(">=",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThanOrEqualTo));
-            keywordMap["<="] = Token("<=",TokenType::Operator,SubTokenInfo(SubTokenType::LessThanOrEqualTo));
+            keywordMap["=="] = Token("==",TokenType::Operator,SubTokenInfo(SubTokenType::EqualTo),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["++"] = Token("++",TokenType::Operator,SubTokenInfo(SubTokenType::Increment),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["--"] = Token("--",TokenType::Operator,SubTokenInfo(SubTokenType::Decrement),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["+="] = Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Add_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["-="] = Token("-=",TokenType::Operator,SubTokenInfo(SubTokenType::Sub_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["*="] = Token("*=",TokenType::Operator,SubTokenInfo(SubTokenType::Mul_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["/="] = Token("/=",TokenType::Operator,SubTokenInfo(SubTokenType::Div_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["%="] = Token("%=",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap[">="] = Token(">=",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThanOrEqualTo),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["<="] = Token("<=",TokenType::Operator,SubTokenInfo(SubTokenType::LessThanOrEqualTo),TokenLocationInfo(currentLineNumber,currentColumnNumber));
             //random range
-            keywordMap[">_<"] = Token(">_<",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign));
+            keywordMap[">_<"] = Token(">_<",TokenType::Operator,SubTokenInfo(SubTokenType::Mod_Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
+            keywordMap["if"] = Token("if",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["else"] = Token("else",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["do"] = Token("do",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["while"] = Token("while",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["for"] = Token("for",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["foreach"] = Token("foreach",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
+            keywordMap["struct"] = Token("struct",TokenType::Keyword,SubTokenInfo(SubTokenType::DataStructure),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
-            keywordMap["if"] = Token("if",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
-            keywordMap["else"] = Token("else",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
-            keywordMap["do"] = Token("do",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
-            keywordMap["while"] = Token("while",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
-            keywordMap["for"] = Token("for",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
-            keywordMap["foreach"] = Token("foreach",TokenType::Keyword,SubTokenInfo(SubTokenType::ControlStructure));
+            keywordMap["use"] = Token("use",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["include"] = Token("include",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["summon"] = Token("summon",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
+            keywordMap["false"] = Token("false",TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Bool),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+            keywordMap["true"] = Token("true",TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Bool),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
-            keywordMap["struct"] = Token("struct",TokenType::Keyword,SubTokenInfo(SubTokenType::DataStructure));
-
-            keywordMap["use"] = Token("use",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
-            keywordMap["include"] = Token("include",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
-            keywordMap["summon"] = Token("summon",TokenType::PreprocessorDirectory,SubTokenInfo(SubTokenType::Default));
 
 }
 
 void Lexer::InitializeSpecialCharacterMap(){
+
+//deal with ' "" individually later use slice to return the actual text within the coats and not with the coats
+//themselves
+
     //and as for these seprators sure they can have diffrent meaning
     //but still is best to know that these are seprators
-specialCharacterMap['('] = Token("(",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenParen));
-specialCharacterMap[')'] = Token(")",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseParen));
-specialCharacterMap['{'] = Token("{",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace));
-specialCharacterMap['}'] = Token("}",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBrace));
-specialCharacterMap['['] = Token("[",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBracket));
-specialCharacterMap[']'] = Token("]",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBracket));
-specialCharacterMap[':'] = Token(":",TokenType::Seprator,SubTokenInfo(SubTokenType::Default));
-specialCharacterMap[';'] = Token(";",TokenType::Seprator,SubTokenInfo(SubTokenType::SemiColon));
-specialCharacterMap[','] = Token(",",TokenType::Seprator,SubTokenInfo(SubTokenType::Comma));
-specialCharacterMap['='] = Token("=",TokenType::Operator,SubTokenInfo(SubTokenType::Assign));
-specialCharacterMap['+'] = Token("+",TokenType::Operator,SubTokenInfo(SubTokenType::Addition));
-specialCharacterMap['-'] = Token("-",TokenType::Operator,SubTokenInfo(SubTokenType::Subtract));
-specialCharacterMap['*'] = Token("*",TokenType::Operator,SubTokenInfo(SubTokenType::Multiply));
-specialCharacterMap['/'] = Token("/",TokenType::Operator,SubTokenInfo(SubTokenType::Divide));
-specialCharacterMap['%'] = Token("%",TokenType::Operator,SubTokenInfo(SubTokenType::Modulos));
-specialCharacterMap['>'] = Token(">",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThan));
-specialCharacterMap['<'] = Token("<",TokenType::Operator,SubTokenInfo(SubTokenType::LessThan));
+specialCharacterMap['('] = Token("(",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenParen),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap[')'] = Token(")",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseParen),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['{'] = Token("{",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['}'] = Token("}",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBrace),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['['] = Token("[",TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBracket),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap[']'] = Token("]",TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBracket),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap[':'] = Token(":",TokenType::Seprator,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['"'] = Token("\"",TokenType::Seprator,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['\''] = Token("'",TokenType::Seprator,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap[';'] = Token(";",TokenType::Seprator,SubTokenInfo(SubTokenType::SemiColon),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap[','] = Token(",",TokenType::Seprator,SubTokenInfo(SubTokenType::Comma),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['='] = Token("=",TokenType::Operator,SubTokenInfo(SubTokenType::Assign),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['+'] = Token("+",TokenType::Operator,SubTokenInfo(SubTokenType::Addition),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['-'] = Token("-",TokenType::Operator,SubTokenInfo(SubTokenType::Subtract),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['*'] = Token("*",TokenType::Operator,SubTokenInfo(SubTokenType::Multiply),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['/'] = Token("/",TokenType::Operator,SubTokenInfo(SubTokenType::Divide),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['%'] = Token("%",TokenType::Operator,SubTokenInfo(SubTokenType::Modulos),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['>'] = Token(">",TokenType::Operator,SubTokenInfo(SubTokenType::GreaterThan),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['<'] = Token("<",TokenType::Operator,SubTokenInfo(SubTokenType::LessThan),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+specialCharacterMap['~'] = Token("~",TokenType::SpecialSymbol,SubTokenInfo(SubTokenType::FunctionStarter),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+//now when we encounter ~ we expect a function defination either a modifier or a return type
 
 }
+
 
 
 
@@ -279,12 +318,38 @@ void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, boo
         //handle single line comment
         comment += "//"; //start of single line comment
         codeStream.get();
+        //consume second /
         while(codeStream.get(ch) && ch != '\n'){
             comment += ch;
         }
     }
 
-    tokens.push_back(Token(comment,TokenType::Comment,SubTokenInfo()));
+    tokens.push_back(Token(comment,TokenType::Comment,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
+    }catch(exception e){
+        cout << e.what() << "\n";
+    }
+}
+
+
+
+void Lexer::processStringLiteral(istringstream& codeStream, vector<Token>& tokens){
+    try{
+    string stringLiteral;
+    char ch;
+  //now we weel need to expand this to handle more complex stuff like strings within strings an such
+        stringLiteral = "\"";
+   
+        while(codeStream.get(ch)){
+            if(ch == '"'){
+                stringLiteral += ch;
+                break;
+                //end of Literal
+            }else{
+              stringLiteral += ch;
+            }
+        }
+  
+    tokens.push_back(Token(stringLiteral,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_String),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
     }catch(exception e){
         cout << e.what() << "\n";
     }
@@ -296,11 +361,14 @@ bool Lexer::isSpecialCharacter(char ch)const{
 return specialCharacterMap.find(ch) != specialCharacterMap.end();
 }
 
+
 bool Lexer::isCombinableSpecialCharacter(char ch)const{
     //define all special characters that should be tokenized individually
     regex pattern("[-*%=+><]");
-    return regex_match(string(1,ch),pattern);
+    bool isMatch = regex_match(string(1,ch),pattern);
+    return isMatch;
 }
+
 
 
 bool  Lexer::isKeyword(string& tokenValue)const{
@@ -349,6 +417,8 @@ while(codeStream){
     cout << "Current Token Value Is :: " << currentToken.tokenValue << " :: And Next Token IS :: " << nextToken.tokenValue << "\n :: And Last Known Token From Current Token Is ::" << lastKnownValidToken.tokenValue << endl ;
 
 }
+//push an end of file token at end of code stream
+tokens.push_back(Token("end",TokenType::EndOfFile,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
 
 
 
@@ -363,19 +433,21 @@ return true;
     return false;
 }
 }
-string Lexer::getDeclarationType(Token& currentToken,Token& lastKnownToken,Token& nextToken){
+
+bool Lexer::isMemberDeclaration(Token currentToken,Token lastKnownToken,Token nextToken){
 
 if(currentToken.tokenValue == "const" || currentToken.tokenValue == "var" ){
-    return "Member";
-}else if(isPredefinedReturnType(lastKnownToken.tokenValue) && Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == "=" ||  nextToken.tokenValue == ";"){
-   return "Member";
-}else if(isPredefinedReturnType(lastKnownToken.tokenValue) && Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == ":" ||  nextToken.tokenValue == "("){
-    return "Function";
+    return true;
+}else if( lastKnownToken.tokenType == TokenType::AccessModifier && isPredefinedReturnType(currentToken.tokenValue)){
+   return true;
+}else if(isPredefinedReturnType(lastKnownToken.tokenValue) && Utilities().isValidIdentifier(currentToken.tokenValue)){
+   return true;
 }else{
-    return "Error";
+    return false;
 }
 
 }
+
 
 bool Lexer::isPredefinedReturnType(std::string& tokenVal){
     //this needs better implementation
@@ -414,18 +486,12 @@ but is actually only one token so in the defualt tken keeper we when we are clas
 we encounter such a case first edit the current token we are        classifying based on it and the next token
 and then edit the > and = and combine them into one token in the token keeper or something like that just get it to work*/
 
-Token Lexer::classifyToken( Token& currentToken,Token lastKnownToken,Token nextToken){
+Token Lexer::classifyToken( Token& currentToken,Token& lastKnownToken,Token& nextToken){
     //always start from lastknown token type
 //this function will handle the actual tokenization and place tokens In Actual Token Or Use The Tier
 
 //for code comsumption retokening
-/*
-else if(currentToken.tokenValue == "+" && nextToken.tokenValue == "="){
-    //this code consumption retokening is for latter
-     return Token("+=",TokenType::Operator,SubTokenInfo(SubTokenType::Bit_ShiftRight));
-
-    }
-*/
+//already doing +,= += thing in processToken func
 
 
 switch(currentState){
@@ -449,7 +515,7 @@ lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
 
 if(lastKnownToken.tokenValue == "class" && Utilities().isValidIdentifier(currentToken.tokenValue)){
     //that means current token should be an identifier
-   Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+   Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
    if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
 IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::ClassIdentifier);
@@ -484,55 +550,45 @@ if(currentToken.tokenValue == "}"){
    }else{
     cout << "Error MissMatched Braces Too Many Braces" << endl;
    }
-}
-
-//this requires serious work
-    //change state to member declaration or something
-    string declarationType = getDeclarationType(currentToken,lastKnownToken,nextToken);
-
-    if(declarationType == "Member"){
-//deal with case of public in myval,int,bah,dud; latter
-        currentState = MemberDeclaration;
+}else if(currentToken.tokenValue == "~"){
+    //then we expect a function
+    currentState = FunctionDeclaration;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+}else if(isMemberDeclaration(currentToken,lastKnownToken,nextToken) ){
+    //is member
+       currentState = MemberDeclaration;
         lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
       if(currentToken.tokenType == TokenType::Identifier){
 
-      Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
-   if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
 IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::MemberIdentifier);
 symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
 cout << " Added Identifier " << currentToken.tokenValue << " As Member Identifier " << endl;
-   }
-   return returnToken;
-    }
-}else if(declarationType == "Function"){
-        currentState = FunctionDeclaration;
-        lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
-    if(currentToken.tokenType == TokenType::Identifier){
-
-      Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
-
-   if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
-IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::FunctionIdentifier);
-symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
-cout << " Added Identifier " << currentToken.tokenValue << " As Function Identifier " << endl;
+   }else{
+    //retrive identifier value and type from stack
+    auto retrivedId = symbols.getIdentifier(currentToken.tokenValue);
+    cout << " Retrived Identifier From Stack " << retrivedId->identifierType << endl;
    }
 
    return returnToken;
     }
-
 }
+
 
 //also at the end make cheack of stack
 //nou dont cheack if its emty here because we hav diff symbols /{} : and the likes make
 //better cheack algo for each diff symbol latter
 if(encloseSymbolsStack.empty()){
-    cout << "All Open And Close Symbols Are Matched Perfectly To Error" << endl;
+       cout << "All Open And Close Symbols Are Matched Perfectly To Error" << endl;
       currentState = NormalState;
       lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
 }else{
-   cout << "Error MissMatched Open And Close Symbols Too Many Open And Close Symbols" << endl;
+      cout << "Error MissMatched Open And Close Symbols Too Many Open And Close Symbols" << endl;
+   
 }
+
 }
 break;
 
@@ -543,7 +599,22 @@ case MemberList:{
 break;
        case MemberDeclaration:{
 //prob
-if(currentToken.subTokenInfo.subTokenType == SubTokenType::SemiColon){
+if(Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == "=" || nextToken.tokenValue == ";" ){
+
+Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+
+if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::MemberIdentifier);
+symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
+cout << " Added Identifier " << currentToken.tokenValue << " As Member Identifier " << endl;
+   }else{
+    //retrive identifier value and type from stack
+    auto retrivedId = symbols.getIdentifier(currentToken.tokenValue);
+    cout << " Retrived Identifier From Stack " << retrivedId->identifierType << endl;
+   }
+
+   return returnToken;
+}else if(currentToken.subTokenInfo.subTokenType == SubTokenType::SemiColon){
 //go back to class body
 currentState = ClassBody;
 lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
@@ -551,35 +622,52 @@ lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
   
 auto numType = Utilities().cheackNumberType(currentToken.tokenValue);
 if(numType == "Integer"){
-return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer));
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Integer),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
 }else if(numType == "Float"){
-return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
 }else if(numType == "Double"){
-return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Float));
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Double),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
 }else{
 cout << "Unknown Number Type";
 }
 
-}else if(lastKnownToken.tokenValue == "=" || lastKnownToken.tokenValue == "@" && currentToken.tokenValue[0] == '"'){
-    //we be in string literal state or concactianation
-    currentState = StringLiteral;
-    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
-}
+}else if(currentToken.tokenValue == "false" || currentToken.tokenValue == "true"){
+
+return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Bool),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+
+ }
 //fix this place better
     
+
  }
 
     break;
       case FunctionDeclaration:{
-if(currentToken.tokenValue == ":" || currentToken.tokenValue == "("){
+        
+if(Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == ":" || nextToken.tokenValue == "(" ){
+
+Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+
+if(symbols.getIdentifier(currentToken.tokenValue) == nullptr){
+IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::FunctionIdentifier);
+symbols.addIdentifier(returnToken.tokenValue,returnTokenIdentifierInfo);
+cout << " Added Identifier " << currentToken.tokenValue << " As Function Identifier " << endl;
+   }else{
+    //retrive identifier value and type from stack
+    auto retrivedId = symbols.getIdentifier(currentToken.tokenValue);
+    cout << " Retrived Identifier From Stack " << retrivedId->identifierType << endl;
+   }
+
+   return returnToken;
+}else if(currentToken.tokenValue == ":" || currentToken.tokenValue == "("){
 currentState = ParameterList;
 lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
 encloseSymbolsStack.push(currentToken.tokenValue[0]);
 if(currentToken.tokenValue == ":"){
-return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon));
+return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 }
 }
 
@@ -595,12 +683,12 @@ if(currentToken.tokenValue == ":" || currentToken.tokenValue == ")" ){
     cout << "Error MissMatched Braces Too Many Braces" << endl;
    }
    if(currentToken.tokenValue == ":"){
-return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon));
+return Token(currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 }
 //remeber diff stuff can be passed as params i.e classs and stuffin,bool,structs defined
 }else if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::DataType && Utilities().isValidIdentifier(currentToken.tokenValue)){
     //that means currentToken is a parameter identifier
-   Token returnToken = Token( currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default));
+   Token returnToken = Token( currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
    if(symbols.getIdentifier(returnToken.tokenValue) == nullptr){
 
 IdentifierInfo returnTokenIdentifierInfo = IdentifierInfo(IdentifierType::ParameterIdentifier);
@@ -609,6 +697,15 @@ cout << " Added Identifier " << currentToken.tokenValue << " As Parameter Identi
    }
 
    return returnToken;
+}else if(currentToken.tokenValue == "{"){
+    //basically for case of ~public void main:byte val{}
+  currentState = FunctionBody;
+    lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
+  if(!encloseSymbolsStack.empty()){
+    encloseSymbolsStack.pop();
+   }else{
+    cout << "Error MissMatched Braces Too Many Braces" << endl;
+   }
 }
 //dont forget about multiple params i.e int hhh,bool dude and so on
       }
@@ -617,9 +714,8 @@ cout << " Added Identifier " << currentToken.tokenValue << " As Parameter Identi
      case FunctionBody:{
         //hmmm
 if(currentToken.tokenValue == "{"){
-
 encloseSymbolsStack.push(currentToken.tokenValue[0]);
-  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace));
+  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenBrace),TokenLocationInfo(currentLineNumber,currentColumnNumber));
   return returnToken;
 }else if(currentToken.tokenValue == "}"){
 
@@ -634,18 +730,13 @@ cout <<  "\n Miss Matched Symbols in symbol stack";
     lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
  }
  
-  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBrace));
+  Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseBrace),TokenLocationInfo(currentLineNumber,currentColumnNumber));
   return returnToken;
 }else if(currentToken.subTokenInfo.subTokenType == SubTokenType::ControlStructure){
     currentState = Statement;
     lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
 
-    }else if(isCombinableSpecialCharacter(lastKnownToken.tokenValue[0]) && isCombinableSpecialCharacter(currentToken.tokenValue[0])){
-     Token combinedToken = tryGetDoubleCombinableToken(lastKnownToken,currentToken);
-     if(combinedToken.tokenType != TokenType::Null_Undefined){
-        return combinedToken;
-     }
-}
+    }
 
 
  }
@@ -661,7 +752,7 @@ cout <<  "\n Miss Matched Symbols in symbol stack";
 if(lastKnownToken.subTokenInfo.subTokenType == SubTokenType::ControlStructure && currentToken.tokenValue == ":" || currentToken.tokenValue == "("){
 encloseSymbolsStack.push(currentToken.tokenValue[0]);
 if( currentToken.tokenValue == ":"){
-    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon));
+    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::OpenColon),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 }
 }else if(currentToken.tokenValue == ":" || currentToken.tokenValue == ")" && nextToken.tokenValue == "{"){
 
@@ -669,7 +760,7 @@ currentState = StatementBody;
 lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
 
 if( currentToken.tokenValue == ":"){
-    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon));
+    Token returnToken = Token( currentToken.tokenValue,TokenType::Seprator,SubTokenInfo(SubTokenType::CloseColon),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 }
   if(!encloseSymbolsStack.empty()){
        encloseSymbolsStack.pop();
@@ -696,33 +787,13 @@ lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
         }else if(currentToken.tokenValue == "}"){
 //that means we out of state body however we need to pop twice since last state is statement not func body
 //so gotta make method to double pop
+//also symbol stack
     currentState = getValidLastKnownLexerStateDoublePop(lexerStateStack).currentState;
       lexerStateStack.push(LexerStateStack(currentState,currentToken.tokenValue));
     
-        }else if(isCombinableSpecialCharacter(lastKnownToken.tokenValue[0]) && isCombinableSpecialCharacter(currentToken.tokenValue[0]) && isCombinableSpecialCharacter(nextToken.tokenValue[0])){
-
-string newTokenVal;
-newTokenVal += lastKnownToken.tokenValue[0];
-newTokenVal += currentToken.tokenValue[0];
-newTokenVal += nextToken.tokenValue[0];
-//mhh due to the fact we got operators with 3 chars we cant just use current,nexttoken,we gotta use last to
- if(isKeyword(newTokenVal)){
-    //also find a way to remove the currentToken or both current Token And next,last token to make sure only the combine 
-    //one gets returned may be use a pointer or something
-return keywordMap.at(newTokenVal);
-    }else{
-        //the combinable token tot defined in keyword map as it should
-  
-    }
-}
-
+        }
     }
     
-    break;
-          case StringLiteral:{
-
-          }
-
     break;
          case EndOfStatement:{
 
@@ -739,10 +810,16 @@ return keywordMap.at(newTokenVal);
          }
 
     break;
+        case ErrorState:{
+//in error state try find way to fix error make recond=mendation to fix error then go back to privious state
+//maybe after \n or ; ) } u get the gist
+          }
+
+    break;
 
 }
 
-return Token(currentToken.tokenValue,currentToken.tokenType,currentToken.subTokenInfo);
+return Token(currentToken.tokenValue,currentToken.tokenType,currentToken.subTokenInfo,TokenLocationInfo(currentLineNumber,currentColumnNumber));
 }
 
 

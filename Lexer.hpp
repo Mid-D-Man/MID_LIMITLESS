@@ -31,6 +31,11 @@ public : Token readNextToken(istringstream& codeStream);
 public : Token peekNextToken(istringstream& codeStream);
 public : Token peekNextToken2(istringstream& codeStream);
 
+private:bool lenientMode;
+
+public:size_t currentLineNumber;
+public:size_t currentColumnNumber;
+
 
 public : Token determineDefaultTokenType(std::string& tokenValue)const;
 
@@ -40,6 +45,7 @@ public : void InitializeSpecialCharacterMap();
 
 public : void processComment(istringstream& codeStream, std::vector<Token>& tokens, bool isMultiLine);
 
+public : void processStringLiteral(istringstream& codeStream, std::vector<Token>& tokens);
 
 public : bool isSpecialCharacter(char ch)const;
 public : bool isCombinableSpecialCharacter(char ch)const;
@@ -49,7 +55,7 @@ public : bool isKeyword(std::string& tokenValue)const;
 //moved
 
 public : std::vector<Token> tokenize(const std::string& sourceCode);
-public :Token classifyToken(Token& currentToken,Token lastKnownToken,Token nextToken);
+public :Token classifyToken(Token& currentToken,Token& lastKnownToken,Token& nextToken);
 
 public : Token tryGetDoubleCombinableToken(Token firstToken,Token secondToken);
 
@@ -57,7 +63,8 @@ public : Token tryGetDoubleCombinableToken(Token firstToken,Token secondToken);
 public : bool isValidFunctionReturnType(Token token);
 
 
-public : string getDeclarationType(Token& currentToken,Token& lastKnownToken,Token& nextToken);
+
+public : bool isMemberDeclaration(Token currentToken,Token lastKnownToken,Token nextToken);
 public : void handleError();
 
 public : bool isPredefinedReturnType(std::string& tokenVal);

@@ -23,10 +23,12 @@ switch(tokenType){
         case Null_Undefined: return "Null_Undefined";
         case Function_MethodCall: return "Function_MethodCall";
         case UserDefinedToken: return "UserDefinedToken";
-
+  case Error: return "Error";
+case EndOfFile: return "EndOfFile";
 
 }
 };
+
 
 
 

@@ -20,6 +20,10 @@ enum SubTokenType{
     CloseBracket,
     OpenColon,
     CloseColon,
+    OpenDoubleQuote,
+    CloseDoubleQuote,
+    OpenSingleQuote,
+    CloseSingleQuote,
     SemiColon,
     Comma,
     Elipses,
@@ -76,8 +80,13 @@ NotEqualTo,
     //literal type
     Literal_String,
     Literal_Float,
+    Literal_Double,
     Literal_Integer,
-    Literal_Character
+    Literal_Character,
+    Literal_Bool,
+
+    //the special symbol type
+    FunctionStarter
 };
 
 

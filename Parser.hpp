@@ -2,28 +2,29 @@
 #define PARSER_HPP
 
 #include <vector>
-#include <string>
 #include "Lexer.hpp"
+#include <vector>
+#include <string>
 
-class Parser{
-    private:
-    Lexer lexer;
-    std::vector<Token> tokens;
-    size_t currentTokenIndex;
-
-    public:
-    Parser(Lexer lexer);
-    void parse();
-private:
-void parserIdentifier();
-bool isValidIdentifier(const string& identifier);
-void parseProgram();
-void parseStatement();
-void parseDeclaration();
-void parseIfStatement();
-void parseWhileStatement();
-void parseForStatement();
-void error(const std::string& message);
+struct Node {
+    std::string value;
+    Node* left;
+    Node* right;
 };
 
-#endif //PARSE_HPP
+class Parser{
+public :Parser();
+Node* parse(std::vector<Token>& tokens);
+Node* parse_expression(std::vector<Token>& tokens, size_t& index);
+
+Node* parse_term(std::vector<Token>& tokens, size_t& index);
+
+Node* parse_factor(std::vector<Token>& tokens, size_t& index);
+
+Node* parse_statement(std::vector<Token>& tokens, size_t& index);
+void report_error(const std::string& message, const Token& token);
+void recover_from_error(std::vector<Token>& tokens, size_t& index);
+bool is_NumberToken(Token token);
+};
+
+#endif

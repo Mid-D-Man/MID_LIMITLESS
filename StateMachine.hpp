@@ -15,8 +15,8 @@ enum LexerState{
     VaraibleDeclaration,
     Statement,
     StatementBody,
-    StringLiteral,
-    EndOfStatement
+    EndOfStatement,
+    ErrorState
 };
 
 //our lexer state stack for keeping track of all states the lexer has been in trought the entire tokenization process

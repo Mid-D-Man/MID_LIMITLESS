@@ -1,7 +1,6 @@
 #include <string>
 #include<vector>
 
-
 class Utilities{
 
 public : Utilities();
@@ -14,4 +13,5 @@ public : bool isWhiteSpace(char ch);
  bool isLetter(char c);
 
 };
+
 

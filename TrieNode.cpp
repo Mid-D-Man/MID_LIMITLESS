@@ -38,15 +38,16 @@ void TokenTrie::insert(const Token& token) {
             return tokens.back();
         }
         // Return a default Token if there are no tokens
-        return Token("", TokenType::Identifier, SubTokenInfo());
+        return Token("", TokenType::Identifier, SubTokenInfo(),TokenLocationInfo());
     }
+
 
     Token TokenTrie::getFirstToken() const {
         if (!tokens.empty()) {
             return tokens.front();
         }
         // Return a default Token if there are no tokens
-        return Token("", TokenType::Identifier, SubTokenInfo());
+        return Token("", TokenType::Identifier, SubTokenInfo(),TokenLocationInfo());
     }
 
     bool TokenTrie::deleteToken(const std::string &tokentokenValue) {
