@@ -43,9 +43,9 @@ public : void InitializeKeywordMap();
 
 public : void InitializeSpecialCharacterMap();
 
-public : void processComment(istringstream& codeStream, std::vector<Token>& tokens, bool isMultiLine);
+public : Token processComment(istringstream& codeStream, bool isMultiLine);
 
-public : void processStringLiteral(istringstream& codeStream, std::vector<Token>& tokens);
+public : Token processStringLiteral(istringstream& codeStream,char& quoteType);
 
 public : bool isSpecialCharacter(char ch)const;
 public : bool isCombinableSpecialCharacter(char ch)const;

@@ -66,10 +66,9 @@ currentColumnNumber = 1;
 }else if(ch == '\t'){
 currentColumnNumber += 4;
     }else if(isSpecialCharacter(ch)){
-    //if its a secial character return it as a token imediately
-    if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
-        tokenValue += ch;
-    }else if(isCombinableSpecialCharacter(ch) && isCombinableSpecialCharacter(codeStream.peek())){
+        if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
+tokenValue += ch;
+        }else if(isCombinableSpecialCharacter(ch) && isCombinableSpecialCharacter(codeStream.peek())){
       string newVal;
       newVal += ch;
       newVal += codeStream.peek();
@@ -79,18 +78,19 @@ codeStream.get();
 return keywordMap.at(newVal);
       }
 //comback and handle string literals latter
-    }else if(ch == '"'){
-      //gotta figure this shit out
-      }else if(ch == '/' ){
+    }else if(ch == '"' || ch == '\''){
+  return processStringLiteral(codeStream,ch);
+  
+    }else if(ch == '/' ){
     if(codeStream.peek() == '/'){
             //single line comment
         
-        processComment(codeStream,tokens,false);
-        tokenValue.clear();
+      return processComment(codeStream,false);
+   
       }else if(codeStream.peek() == '*'){
         //multiline comment
-        processComment(codeStream,tokens,true);
-        tokenValue.clear();
+        return processComment(codeStream,true);
+    
         }else{
            return specialCharacterMap.at(ch);
         }
@@ -115,20 +115,42 @@ currentColumnNumber ++;
 
 //pretty sure this is for putting stuff back into the codeStream
  while(codeStream.get(ch)){
-
 if(isspace(ch) || isSpecialCharacter(ch)){
-   if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
-        tokenValue += ch;
-    }else{
- codeStream.unget();
+ 
+codeStream.unget();
 break;
-    }
-    
+
 }else{
     tokenValue += ch;
 }
+
+//handling floats with optional e and stuff
+
+
+
 }
 
+/* i donno keep
+ if(ch =='.' && Utilities().isNumeric(codeStream.peek())){
+        tokenValue += ch;
+        while(codeStream.get(ch) && Utilities().isNumeric(ch)){
+            tokenValue += ch;
+        }
+        if(ch == 'e' || ch == 'E'){
+            tokenValue += ch;
+            if(codeStream.peek() == '-' || codeStream.peek() == '+'){
+                tokenValue += codeStream.get();
+            }
+            while(codeStream.get(ch) && Utilities().isNumeric(ch)){
+                tokenValue += ch;
+            }
+        }
+        if(ch == 'f' || ch == 'F'){
+            tokenValue += ch;
+        }else{
+            codeStream.unget();
+        }
+    }*/
 //can change tis to determine default token
     Token defaultToken = determineDefaultTokenType(tokenValue);
     //ok for stuff like int,bool and the likes that never change
@@ -296,7 +318,7 @@ specialCharacterMap['~'] = Token("~",TokenType::SpecialSymbol,SubTokenInfo(SubTo
 
 
 
-void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, bool isMultiLine){
+Token Lexer::processComment(istringstream& codeStream, bool isMultiLine){
     try{
     string comment;
     char ch;
@@ -314,6 +336,7 @@ void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, boo
                 //end MultiLineComment
             }
         }
+        
     }else{
         //handle single line comment
         comment += "//"; //start of single line comment
@@ -324,7 +347,7 @@ void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, boo
         }
     }
 
-    tokens.push_back(Token(comment,TokenType::Comment,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
+   return Token(comment,TokenType::Comment,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber));
     }catch(exception e){
         cout << e.what() << "\n";
     }
@@ -332,28 +355,31 @@ void Lexer::processComment(istringstream& codeStream, vector<Token>& tokens, boo
 
 
 
-void Lexer::processStringLiteral(istringstream& codeStream, vector<Token>& tokens){
+Token Lexer::processStringLiteral(istringstream& codeStream,char& quoteType){
     try{
-    string stringLiteral;
+    string tokenValue(1,quoteType);
     char ch;
-  //now we weel need to expand this to handle more complex stuff like strings within strings an such
-        stringLiteral = "\"";
-   
-        while(codeStream.get(ch)){
-            if(ch == '"'){
-                stringLiteral += ch;
-                break;
-                //end of Literal
-            }else{
-              stringLiteral += ch;
+
+    while(codeStream.get(ch)){
+        tokenValue += ch;
+        if(ch == '\\'){
+            if(codeStream.get(ch)){
+                tokenValue += ch;
             }
-        }
-  
-    tokens.push_back(Token(stringLiteral,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_String),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
-    }catch(exception e){
-        cout << e.what() << "\n";
+        }else if(ch == quoteType){
+                //end of literal
+                break;
+            }
     }
+    
+    return Token(tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_String),TokenLocationInfo(currentLineNumber,currentColumnNumber));
+    }catch(exception e){
+        std::cout << e.what() << "\n";
+          return Token();
+    }
+    
 }
+
 
 //just use special character map
 bool Lexer::isSpecialCharacter(char ch)const{
@@ -414,8 +440,7 @@ while(codeStream){
     ++currentTokenIndex;
 
     cout << "After Cheacks Our Current Lex State Is : " << currentState << " : With Returned Value Of : " << fullyClassifiedToken.tokenValue << "\n" << endl;
-    cout << "Current Token Value Is :: " << currentToken.tokenValue << " :: And Next Token IS :: " << nextToken.tokenValue << "\n :: And Last Known Token From Current Token Is ::" << lastKnownValidToken.tokenValue << endl ;
-
+   
 }
 //push an end of file token at end of code stream
 tokens.push_back(Token("end",TokenType::EndOfFile,SubTokenInfo(),TokenLocationInfo(currentLineNumber,currentColumnNumber)));
@@ -598,8 +623,8 @@ case MemberList:{
 }
 break;
        case MemberDeclaration:{
-//prob
-if(Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == "=" || nextToken.tokenValue == ";" ){
+//make better identifier cheack
+if(Utilities().isValidIdentifier(currentToken.tokenValue) && nextToken.tokenValue == "="){
 
 Token returnToken = Token(currentToken.tokenValue,TokenType::Identifier,SubTokenInfo(SubTokenType::Default),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
@@ -638,7 +663,11 @@ cout << "Unknown Number Type";
 
 return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_Bool),TokenLocationInfo(currentLineNumber,currentColumnNumber));
 
+ }else if(currentToken.subTokenInfo.subTokenType == SubTokenType::Literal_String){
+ return Token(currentToken.tokenValue,TokenType::Literial,SubTokenInfo(SubTokenType::Literal_String),TokenLocationInfo(currentLineNumber,currentColumnNumber));
  }
+
+
 //fix this place better
     
 

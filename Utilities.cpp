@@ -44,7 +44,7 @@ return regex_match(tokenValue,identifierRex);
 }
 
 string Utilities::cheackNumberType(string tokenValue)const{
-    regex numRegex(R"([+-]?(\d+\.\d*|\.\d+|\d+)([eE][-+]?\d+)?)");
+    regex numRegex(R"([+-]?(\d+\.\d*|\.\d+|\d+)([eE][-+]?\d+)?[fF]?)");
 if(regex_match(tokenValue,numRegex)){
     if(tokenValue.find('.') == std::string::npos){
 return "Integer";
