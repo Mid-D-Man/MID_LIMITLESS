@@ -1,0 +1,16 @@
+How an ELR Parser Works:
+
+    Shift: This action pushes the current input token onto the stack and moves to the next state in the parse table. It's like acknowledging and storing the token until we know what to do with it.
+
+    Reduce: This action looks at the tokens on the stack and matches them to a production rule. Then, it pops those tokens off the stack and pushes the result of the production rule back onto the stack. It’s like recognizing a pattern and simplifying it.
+
+    State	Input	Action	Next State
+0	class	shift	1
+1	identifier	shift	2
+2	{	shift	3
+3	access_modifier	shift	4
+4	type	shift	5
+5	identifier	shift	6
+6	=	shift	7
+7	expression	reduce	member_declaration
+...	...	...	...

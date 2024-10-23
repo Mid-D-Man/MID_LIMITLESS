@@ -1,0 +1,54 @@
+alright this is were we keep info about the language syntax,semantics
+
+classes are defined like in any other oj oriented language
+i.e public class MyNative
+//and the can inherit from other classes or multipleother classes
+i.e public class MyNative:FormalInstruments{
+
+}
+//functions are defined using the water mark symbol to make it easier althogh we have aredy made it symbol
+//they can be defined just like in c# but i think it will make it far easier if we did this instead
+i.e ~//then it espects either an access modifier,virtual,abstract or a return type or void then an identifier
+i.e ~public void GetAttaier
+then a function expcpects either a : and a list of parameters to follow until we reach fuction body i.e{}
+or ()like any other language and {}
+i.e for : we do ~private abstract int MyFunc:byte param1,float otherParam{}
+i.e for () we do ~protected byte Func2(byte param1){}
+//note max numbers of params is 12
+
+//now to call functions u can also either do ::with params inside or () which requires a ;
+i.e with :
+var Getting = MyFunc:12,0.5f:
+i.e with ()
+var getting = Func2(19);
+//and no need to wory as we use symbol stack
+
+//now structs and other such stuff like interfaces are defiend the exact same way in c#
+
+//now for if statements we do
+i.e
+~public void Main:{
+    if:myValue >= 12{
+        //do something
+    }else if: myvalue == null{
+        //do something else
+    }else{
+        //do something
+    }
+}
+//also note in case of single line statement with : u use :: and then the body
+i.e
+~void Main:{
+    if:datum.isValid://do something
+}
+or you can use the regular() if else methods same goes for switch althogh a lil diffrent when it comes to :
+i.e
+//yeah we gonna have to do something better
+~int myFunc:byte datt{
+    switc:datt{
+case //somecodndion :
+//do something
+break or <:
+    }
+}
+//also note we should make this a bit like java script to
